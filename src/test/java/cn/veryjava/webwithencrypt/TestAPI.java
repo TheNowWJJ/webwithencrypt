@@ -2,7 +2,6 @@ package cn.veryjava.webwithencrypt;
 
 import cn.veryjava.encrypt.DigestUtil;
 import cn.veryjava.encrypt.OrderByWordUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +9,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,33 +28,101 @@ public class TestAPI {
   @Autowired
   RestTemplate restTemplate;
 
-  private String VERIFY_URL = "http://localhost:8080/api/gf_client/verify";
+  private String BASE_URL = "http://localhost:8080/api/gf_client";
 
   @Test
-  public void testVerify() throws Exception {
+  public void testGetOrder() throws Exception {
 
     // 初始化参数
-    String orderId = "20160929113347302";
-    String time = String.valueOf(new Date().getTime());
-    String account = "102400";// 精确到分,倒数第三位是 元
-
-    Map<String, String> requestParams = new HashMap<>();
-    requestParams.put("orderId", orderId);
-    requestParams.put("time", time);
-    requestParams.put("account", account);
-
-    // 对参数进行字母序排列
-    String requestSignString = OrderByWordUtil.order(requestParams);
-
-    // 对参数进行HmacSHA1数字摘要
-    String hmac = DigestUtil.hmacSHA1Base64(requestSignString);
-
-    // 将数字摘要内容放置到请求参数中
-    requestParams.put("hmac", hmac);
+    String orderNo = "123";
+    // 这种情况下会抛出400异常
+    //String getOrderUrl = BASE_URL + "/getOrder";
+    // 这种情况下返回值result_code=3 result_type订单号为空
+    String getOrderUrl = BASE_URL + "/order/" + orderNo;
 
     // 发起请求并接收返回值
-    Map response = restTemplate.postForObject(VERIFY_URL, requestParams, Map.class);
-    System.out.println(new ObjectMapper().writeValueAsString(response));
-    System.out.println(response.get("orderId"));
+    Map response = restTemplate.getForObject(getOrderUrl, Map.class);
+
+    // result_code = 1 为成功
+    if (response.get("result_code").equals("1")) {
+
+      String hmac = (String) response.get("hmac");
+
+      response.remove("hmac");
+
+      // 验证hmac
+      if (verifyHmac(response, hmac)) {
+        System.out.println("验证成功");
+        System.out.println(response.get("orderNo"));
+      } else {
+        System.out.println("验证失败");
+      }
+    } else {
+      System.out.println(response.get("result_type"));
+    }
+  }
+
+  @Test
+  public void testNotify() {
+    // 初始化参数
+    String orderNo = "20160929190002665";
+    String amount = "2048.90";
+    String payNo = "12345567890";
+    String bankCardNo = "62222222222";
+    String bankCardName = "广发银行";
+
+    Map<String, String> request = new HashMap<>();
+    request.put("orderNo", orderNo);
+    request.put("amount", amount);
+    request.put("payNo", payNo);
+    request.put("bankCardNo", bankCardNo);
+    request.put("bankCardName", bankCardName);
+    String hmac = getHmac(request);
+    request.put("hmac", hmac);
+
+    String notifyUrl = BASE_URL + "/notify";
+    // 发起请求并接收返回值
+    Map response = restTemplate.postForObject(notifyUrl, request, Map.class);
+
+    // result_code = 1 为成功
+    if (!response.get("result_code").equals("1")) {
+      System.out.println(response.get("result_type"));
+    } else {
+      String requestHmac = (String) response.get("hmac");
+
+      response.remove("hmac");
+
+      // 验证hmac
+      if (verifyHmac(response, requestHmac)) {
+        System.out.println("验证成功");
+        System.out.println(response.get("payNo"));
+      } else {
+        System.out.println("验证失败");
+      }
+    }
+  }
+
+  public boolean verifyHmac(Map<String, String> verify, String hmac) {
+    return getHmac(verify).equals(hmac);
+  }
+
+  public String getHmac(Map<String, String> map) {
+    // 按照字母序排列
+    String orderString = OrderByWordUtil.order(map);
+    // hmac
+    String hmac = DigestUtil.hmacSHA1Base64(orderString);
+    return hmac;
+  }
+
+  @Test
+  public void testMapClear() {
+    Map<String, String> map = new HashMap<>();
+    map.put("f", "f");
+
+    System.out.println(map);
+
+    // clear
+    map.clear();
+    System.out.println(map);
   }
 }
