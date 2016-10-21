@@ -19,12 +19,19 @@ import java.util.Map;
  * JDK: since 1.8
  */
 @Controller
-@RequestMapping("/api/gf_client")
+@RequestMapping("/api/yl_client")
 public class APIController {
 
-  @RequestMapping(value = "/order/{orderNo}", method = RequestMethod.GET)
+  @RequestMapping(value = "/order", method = RequestMethod.GET)
   @ResponseBody
-  public Map<String, String> getOrder(@PathVariable String orderNo) {
+  public Map<String, String> getOrder(@RequestParam String orderInfo) {
+
+    String orderNo = orderInfo.substring(0, 16);
+    String payType = orderInfo.substring(16);
+
+    System.out.println(orderNo);
+    System.out.println(payType);
+
     // 返回值
     Map<String, String> response = new HashMap<>();
     try {
@@ -34,7 +41,14 @@ public class APIController {
         return response;
       }
 
+      if (StringUtils.isEmpty(payType)) {
+        response.put("result_code", "10");
+        response.put("result_type", "支付方式为空");
+        return response;
+      }
+
       System.out.println("request orderNo : " + orderNo);
+      System.out.println("payType : " + payType);
 
       // 根据订单号查询到的金额
       String amount = "1024.00";

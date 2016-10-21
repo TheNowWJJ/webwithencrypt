@@ -21,24 +21,18 @@ import java.util.Map;
  * 版本: 1.0
  * JDK: since 1.8
  */
-@RunWith(SpringJUnit4ClassRunner.class)
-@SpringBootTest(classes = WebwithencryptApplication.class)
 public class TestAPI {
 
-  @Autowired
-  RestTemplate restTemplate;
+  RestTemplate restTemplate = new RestTemplate();
 
-  private String BASE_URL = "http://localhost:8080/api/gf_client";
+  private String BASE_URL = "http://localhost:8080/api/yl_client";
 
   @Test
   public void testGetOrder() throws Exception {
 
     // 初始化参数
-    String orderNo = "123";
-    // 这种情况下会抛出400异常
-    //String getOrderUrl = BASE_URL + "/getOrder";
-    // 这种情况下返回值result_code=3 result_type订单号为空
-    String getOrderUrl = BASE_URL + "/order/" + orderNo;
+    String orderNo = "1111111111111112";
+    String getOrderUrl = BASE_URL + "/order?orderInfo=" + orderNo + "XS";
 
     // 发起请求并接收返回值
     Map response = restTemplate.getForObject(getOrderUrl, Map.class);
